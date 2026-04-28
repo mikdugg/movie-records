@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AddMovieModal } from "../src/components/AddMovieModal";
 import type { Watch } from "../src/interfaces/watch";
+import { EditableSongList } from "../src/components/EditableSongList";
 
 /**
  * These are AI-generated test for the dialog.
@@ -324,5 +325,60 @@ describe("AddMovieModal Component", () => {
         // Buttons have role="button"
         const buttons = screen.getAllByRole("button");
         expect(buttons.length).toBeGreaterThan(0);
+    });
+
+    test("should verify the initial number of list items", () => {
+        render(
+            <AddMovieModal
+                show={true}
+                handleClose={mockHandleClose}
+                addMovie={mockAddMovie}
+            />,
+        );
+        const initialCount = screen.getAllByRole("textbox").length;
+
+        const addSongButton = screen.getByRole("button", { name: /add song/i });
+        userEvent.click(addSongButton);
+
+        const updatedCount = screen.getAllByRole("textbox").length;
+        expect(updatedCount).toBe(initialCount + 1);
+    });
+
+    test("should call setSongs with new empty song when Add Song is clicked", () => {
+        const mockSetSongs = jest.fn();
+        render(<EditableSongList songs={[]} setSongs={mockSetSongs} />);
+        userEvent.click(screen.getByRole("button", { name: /add song/i }));
+
+        expect(mockSetSongs).toHaveBeenCalledTimes(1);
+        expect(mockSetSongs).toHaveBeenCalledWith([""]);
+    });
+});
+
+describe("EditableSongList Component", () => {
+    test("addSong appends an empty entry to existing songs", () => {
+        const mockSetSongs = jest.fn();
+        render(<EditableSongList songs={["song a"]} setSongs={mockSetSongs} />);
+        userEvent.click(screen.getByRole("button", { name: /add song/i }));
+        expect(mockSetSongs).toHaveBeenCalledWith(["song a", ""]);
+    });
+
+    test("editing a song input calls setSongs with updated list", () => {
+        const mockSetSongs = jest.fn();
+        render(<EditableSongList songs={[""]} setSongs={mockSetSongs} />);
+        userEvent.type(screen.getByRole("textbox"), "a");
+        expect(mockSetSongs).toHaveBeenCalledWith(["a"]);
+    });
+
+    test("delete button calls setSongs with that song removed", () => {
+        const mockSetSongs = jest.fn();
+        render(
+            <EditableSongList
+                songs={["a", "b", "c"]}
+                setSongs={mockSetSongs}
+            />,
+        );
+        const deleteButtons = screen.getAllByRole("button", { name: /❌/i });
+        userEvent.click(deleteButtons[1]);
+        expect(mockSetSongs).toHaveBeenCalledWith(["a", "c"]);
     });
 });
